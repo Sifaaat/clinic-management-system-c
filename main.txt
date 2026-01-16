@@ -1,0 +1,571 @@
+
+You said:
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#define MAX_NAME 50
+#define MAX_SPECIALTY 50
+#define MAX_TIME 20
+#define ADMIN_PASS "admin123" // admin password
+
+struct Patient {
+    int id;
+    char name[MAX_NAME];
+    int age;
+};
+
+struct Doctor {
+    int id;
+    char name[MAX_NAME];
+    char specialty[MAX_SPECIALTY];
+    char availableTime[MAX_TIME];
+};
+
+struct Appointment {
+    int doctorId;
+    int patientId;
+    char time[MAX_TIME];
+};
+
+void clearInputBuffer() {
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+}
+
+// Register a new patient and save to file
+void registerPatient() {
+    struct Patient p;
+    FILE *fp = fopen("data/patients.txt", "a");
+    if (!fp) {
+        printf("Error opening patients file\n");
+        return;
+    }
+
+    printf("Enter patient ID: ");
+    if (scanf("%d", &p.id) != 1) {
+        clearInputBuffer();
+        printf("Invalid input\n");
+        fclose(fp);
+        return;
+    }
+    clearInputBuffer();
+
+    printf("Enter patient name: ");
+    fgets(p.name, MAX_NAME, stdin);
+    p.name[strcspn(p.name, "\n")] = '\0';
+
+    printf("Enter age: ");
+    if (scanf("%d", &p.age) != 1) {
+        clearInputBuffer();
+        printf("Invalid input\n");
+        fclose(fp);
+        return;
+    }
+    clearInputBuffer();
+
+    fprintf(fp, "%d,%s,%d\n", p.id, p.name, p.age);
+    fclose(fp);
+    printf("Patient registered successfully\n");
+}
+
+// View all patients
+void viewPatients() {
+    FILE *fp = fopen("data/patients.txt", "r");
+    if (!fp) {
+        printf("No patient data found\n");
+        return;
+    }
+
+    struct Patient p;
+    printf("\nRegistered Patients:\n");
+    while (fscanf(fp, "%d,%49[^,],%d\n", &p.id, p.name, &p.age) == 3) {
+        printf("ID: %d | Name: %s | Age: %d\n", p.id, p.name, p.age);
+    }
+    fclose(fp);
+}
+
+// Delete patient by ID and remove related appointments
+void deletePatient() {
+    int delId;
+    printf("Enter patient ID to delete: ");
+    if (scanf("%d", &delId) != 1) {
+        clearInputBuffer();
+        printf("Invalid input\n");
+        return;
+    }
+    clearInputBuffer();
+
+    FILE *fp = fopen("data/patients.txt", "r");
+    FILE *temp = fopen("data/temp.txt", "w");
+    if (!fp || !temp) {
+        printf("Error opening files\n");
+        if (fp) fclose(fp);
+        if (temp) fclose(temp);
+        return;
+    }
+
+    struct Patient p;
+    int found = 0;
+    while (fscanf(fp, "%d,%49[^,],%d\n", &p.id, p.name, &p.age) == 3) {
+        if (p.id == delId) {
+            found = 1;
+            continue; // skip this patient
+        }
+        fprintf(temp, "%d,%s,%d\n", p.id, p.name, p.age);
+    }
+
+    fclose(fp);
+    fclose(temp);
+    remove("data/patients.txt");
+    rename("data/temp.txt", "data/patients.txt");
+
+    // Remove appointments for deleted patient
+    FILE *app = fopen("data/appointments.txt", "r");
+    FILE *apptemp = fopen("data/apptemp.txt", "w");
+    if (app && apptemp) {
+        struct Appointment a;
+        while (fscanf(app, "%d,%d,%19[^\n]\n", &a.doctorId, &a.patientId, a.time) == 3) {
+            if (a.patientId == delId) continue;
+            fprintf(apptemp, "%d,%d,%s\n", a.doctorId, a.patientId, a.time);
+        }
+        fclose(app);
+        fclose(apptemp);
+        remove("data/appointments.txt");
+        rename("data/apptemp.txt", "data/appointments.txt");
+    } else {
+        if (app) fclose(app);
+        if (apptemp) fclose(apptemp);
+    }
+
+    if (found) printf("Patient deleted\n");
+    else printf("Patient not found\n");
+}
+
+// Add doctor to file
+void addDoctor() {
+    struct Doctor d;
+    FILE *fp = fopen("data/doctors.txt", "a");
+    if (!fp) {
+        printf("Error opening doctors file\n");
+        return;
+    }
+
+    printf("Enter doctor ID: ");
+    if (scanf("%d", &d.id) != 1) {
+        clearInputBuffer();
+        printf("Invalid input\n");
+        fclose(fp);
+        return;
+    }
+    clearInputBuffer();
+
+    printf("Enter doctor name: ");
+    fgets(d.name, MAX_NAME, stdin);
+    d.name[strcspn(d.name, "\n")] = '\0';
+
+    printf("Enter specialty: ");
+    fgets(d.specialty, MAX_SPECIALTY, stdin);
+    d.specialty[strcspn(d.specialty, "\n")] = '\0';
+
+    printf("Enter available time (e.g., 10AM, 2PM): ");
+    fgets(d.availableTime, MAX_TIME, stdin);
+    d.availableTime[strcspn(d.availableTime, "\n")] = '\0';
+
+    fprintf(fp, "%d,%s,%s,%s\n", d.id, d.name, d.specialty, d.availableTime);
+    fclose(fp);
+    printf("Doctor added successfully\n");
+}
+
+// View all doctors
+void viewDoctors() {
+    FILE *fp = fopen("data/doctors.txt", "r");
+    if (!fp) {
+        printf("No doctor data found\n");
+        return;
+    }
+
+    struct Doctor d;
+    printf("\nDoctors:\n");
+    while (fscanf(fp, "%d,%49[^,],%49[^,],%19[^\n]\n", &d.id, d.name, d.specialty, d.availableTime) == 4) {
+        printf("ID: %d | Name: %s | Specialty: %s | Time: %s\n", d.id, d.name, d.specialty, d.availableTime);
+    }
+    fclose(fp);
+}
+
+// Delete doctor and related appointments
+void deleteDoctor() {
+    int delId;
+    printf("Enter doctor ID to delete: ");
+    if (scanf("%d", &delId) != 1) {
+        clearInputBuffer();
+        printf("Invalid input\n");
+        return;
+    }
+    clearInputBuffer();
+
+    FILE *fp = fopen("data/doctors.txt", "r");
+    FILE *temp = fopen("data/temp.txt", "w");
+    if (!fp || !temp) {
+        printf("Error opening files\n");
+        if (fp) fclose(fp);
+        if (temp) fclose(temp);
+        return;
+    }
+
+    struct Doctor d;
+    int found = 0;
+    while (fscanf(fp, "%d,%49[^,],%49[^,],%19[^\n]\n", &d.id, d.name, d.specialty, d.availableTime) == 4) {
+        if (d.id == delId) {
+            found = 1;
+            continue; // skip this doctor
+        }
+        fprintf(temp, "%d,%s,%s,%s\n", d.id, d.name, d.specialty, d.availableTime);
+    }
+
+    fclose(fp);
+    fclose(temp);
+    remove("data/doctors.txt");
+    rename("data/temp.txt", "data/doctors.txt");
+
+    // Remove appointments for deleted doctor
+    FILE *app = fopen("data/appointments.txt", "r");
+    FILE *apptemp = fopen("data/apptemp.txt", "w");
+    if (app && apptemp) {
+        struct Appointment a;
+        while (fscanf(app, "%d,%d,%19[^\n]\n", &a.doctorId, &a.patientId, a.time) == 3) {
+            if (a.doctorId == delId) continue;
+            fprintf(apptemp, "%d,%d,%s\n", a.doctorId, a.patientId, a.time);
+        }
+        fclose(app);
+        fclose(apptemp);
+        remove("data/appointments.txt");
+        rename("data/apptemp.txt", "data/appointments.txt");
+    } else {
+        if (app) fclose(app);
+        if (apptemp) fclose(apptemp);
+    }
+
+    if (found) printf("Doctor deleted\n");
+    else printf("Doctor not found\n");
+}
+
+// Check if appointment slot conflicts with existing
+int checkConflict(int doctorId, const char* time) {
+    FILE *fp = fopen("data/appointments.txt", "r");
+    if (!fp) return 0;
+
+    struct Appointment a;
+    while (fscanf(fp, "%d,%d,%19[^\n]\n", &a.doctorId, &a.patientId, a.time) == 3) {
+        if (a.doctorId == doctorId && strcmp(a.time, time) == 0) {
+            fclose(fp);
+            return 1;
+        }
+    }
+    fclose(fp);
+    return 0;
+}
+
+// Book an appointment
+void bookAppointment(int patientId) {
+    struct Appointment a;
+    FILE *fp = fopen("data/appointments.txt", "a");
+    if (!fp) {
+        printf("Error opening appointments file\n");
+        return;
+    }
+
+    a.patientId = patientId;
+
+    printf("Enter doctor ID: ");
+    if (scanf("%d", &a.doctorId) != 1) {
+        clearInputBuffer();
+        printf("Invalid input\n");
+        fclose(fp);
+        return;
+    }
+    clearInputBuffer();
+
+    printf("Enter time slot (e.g., 10AM): ");
+    fgets(a.time, MAX_TIME, stdin);
+    a.time[strcspn(a.time, "\n")] = '\0';
+
+    if (checkConflict(a.doctorId, a.time)) {
+        printf("Time slot already booked. Choose another.\n");
+        fclose(fp);
+        return;
+    }
+
+    fprintf(fp, "%d,%d,%s\n", a.doctorId, a.patientId, a.time);
+    fclose(fp);
+    printf("Appointment booked successfully\n");
+}
+
+// View all appointments
+void viewAppointments() {
+    FILE *fp = fopen("data/appointments.txt", "r");
+    if (!fp) {
+        printf("No appointments found\n");
+        return;
+    }
+
+    struct Appointment a;
+    printf("\nAppointments:\n");
+    while (fscanf(fp, "%d,%d,%19[^\n]\n", &a.doctorId, &a.patientId, a.time) == 3) {
+        printf("Doctor ID: %d | Patient ID: %d | Time: %s\n", a.doctorId, a.patientId, a.time);
+    }
+    fclose(fp);
+}
+
+// View appointments for a specific patient
+void viewPatientAppointments(int patientId) {
+    FILE *fp = fopen("data/appointments.txt", "r");
+    if (!fp) {
+        printf("No appointments found\n");
+        return;
+    }
+
+    struct Appointment a;
+    int found = 0;
+    printf("\nYour Appointments:\n");
+    while (fscanf(fp, "%d,%d,%19[^\n]\n", &a.doctorId, &a.patientId, a.time) == 3) {
+        if (a.patientId == patientId) {
+            printf("Doctor ID: %d | Time: %s\n", a.doctorId, a.time);
+            found = 1;
+        }
+    }
+    fclose(fp);
+    if (!found) printf("No appointments booked yet\n");
+}
+
+// Delete appointment (admin only)
+void deleteAppointment() {
+    int doctorId;
+    char time[MAX_TIME];
+
+    printf("Enter Doctor ID of appointment to delete: ");
+    if (scanf("%d", &doctorId) != 1) {
+        clearInputBuffer();
+        printf("Invalid input\n");
+        return;
+    }
+    clearInputBuffer();
+
+    printf("Enter time slot of appointment to delete: ");
+    fgets(time, MAX_TIME, stdin);
+    time[strcspn(time, "\n")] = '\0';
+
+    FILE *fp = fopen("data/appointments.txt", "r");
+    FILE *temp = fopen("data/temp.txt", "w");
+    if (!fp || !temp) {
+        printf("Error opening files\n");
+        if (fp) fclose(fp);
+        if (temp) fclose(temp);
+        return;
+    }
+
+    struct Appointment a;
+    int found = 0;
+    while (fscanf(fp, "%d,%d,%19[^\n]\n", &a.doctorId, &a.patientId, a.time) == 3) {
+        if (a.doctorId == doctorId && strcmp(a.time, time) == 0) {
+            found = 1;
+            continue; // skip this appointment
+        }
+        fprintf(temp, "%d,%d,%s\n", a.doctorId, a.patientId, a.time);
+    }
+
+    fclose(fp);
+    fclose(temp);
+    remove("data/appointments.txt");
+    rename("data/temp.txt", "data/appointments.txt");
+
+    if (found) printf("Appointment deleted\n");
+    else printf("No matching appointment found\n");
+}
+
+// Search patient by ID
+void searchPatientById() {
+    int searchId;
+    printf("Enter patient ID to search: ");
+    if (scanf("%d", &searchId) != 1) {
+        clearInputBuffer();
+        printf("Invalid input\n");
+        return;
+    }
+    clearInputBuffer();
+
+    FILE *fp = fopen("data/patients.txt", "r");
+    if (!fp) {
+        printf("No patient data found\n");
+        return;
+    }
+
+    struct Patient p;
+    int found = 0;
+    while (fscanf(fp, "%d,%49[^,],%d\n", &p.id, p.name, &p.age) == 3) {
+        if (p.id == searchId) {
+            printf("Patient found - ID: %d | Name: %s | Age: %d\n", p.id, p.name, p.age);
+            found = 1;
+            break;
+        }
+    }
+    fclose(fp);
+    if (!found) printf("Patient not found\n");
+}
+
+// Search doctor by specialty
+void searchDoctorBySpecialty() {
+    char specialty[MAX_SPECIALTY];
+    printf("Enter doctor specialty to search: ");
+    fgets(specialty, MAX_SPECIALTY, stdin);
+    specialty[strcspn(specialty, "\n")] = '\0';
+
+    FILE *fp = fopen("data/doctors.txt", "r");
+    if (!fp) {
+        printf("No doctor data found\n");
+        return;
+    }
+
+    struct Doctor d;
+    int found = 0;
+    printf("\nDoctors with specialty '%s':\n", specialty);
+    while (fscanf(fp, "%d,%49[^,],%49[^,],%19[^\n]\n", &d.id, d.name, d.specialty, d.availableTime) == 4) {
+        if (strcmp(d.specialty, specialty) == 0) {
+            printf("ID: %d | Name: %s | Time: %s\n", d.id, d.name, d.availableTime);
+            found = 1;
+        }
+    }
+    fclose(fp);
+    if (!found) printf("No doctors found with that specialty\n");
+}
+
+// Admin menu
+void adminMenu() {
+    int choice;
+    do {
+        printf("\n--- Admin Menu ---\n");
+        printf("1. Register Patient\n");
+        printf("2. Add Doctor\n");
+        printf("3. View Patients\n");
+        printf("4. View Doctors\n");
+        printf("5. View Appointments\n");
+        printf("6. Search Patient by ID\n");
+        printf("7. Search Doctor by Specialty\n");
+        printf("8. Delete Patient\n");
+        printf("9. Delete Doctor\n");
+        printf("10. Delete Appointment\n");
+        printf("0. Logout\n");
+        printf("Enter choice: ");
+
+        if (scanf("%d", &choice) != 1) {
+            clearInputBuffer();
+            printf("Invalid input\n");
+            continue;
+        }
+        clearInputBuffer();
+
+        switch(choice) {
+            case 1: registerPatient(); break;
+            case 2: addDoctor(); break;
+            case 3: viewPatients(); break;
+            case 4: viewDoctors(); break;
+            case 5: viewAppointments(); break;
+            case 6: searchPatientById(); break;
+            case 7: searchDoctorBySpecialty(); break;
+            case 8: deletePatient(); break;
+            case 9: deleteDoctor(); break;
+            case 10: deleteAppointment(); break;
+            case 0: printf("Logging out...\n"); break;
+            default: printf("Invalid choice\n");
+        }
+    } while (choice != 0);
+}
+
+// Patient menu (patientId passed for bookings)
+void patientMenu(int patientId) {
+    int choice;
+    do {
+        printf("\n--- Patient Menu ---\n");
+        printf("1. View Doctors\n");
+        printf("2. Search Doctor by Specialty\n");
+        printf("3. Book Appointment\n");
+        printf("4. View My Appointments\n");
+        printf("0. Logout\n");
+        printf("Enter choice: ");
+
+        if (scanf("%d", &choice) != 1) {
+            clearInputBuffer();
+            printf("Invalid input\n");
+            continue;
+        }
+        clearInputBuffer();
+
+        switch(choice) {
+            case 1: viewDoctors(); break;
+            case 2: searchDoctorBySpecialty(); break;
+            case 3: bookAppointment(patientId); break;
+            case 4: viewPatientAppointments(patientId); break;
+            case 0: printf("Logging out...\n"); break;
+            default: printf("Invalid choice\n");
+        }
+    } while (choice != 0);
+}
+
+int verifyAdmin() {
+    char pass[50];
+    printf("Enter admin password: ");
+    fgets(pass, sizeof(pass), stdin);
+    pass[strcspn(pass, "\n")] = '\0';
+    if (strcmp(pass, ADMIN_PASS) == 0) {
+        printf("Admin verified\n");
+        return 1;
+    }
+    printf("Incorrect password\n");
+    return 0;
+}
+
+int main() {
+#ifdef _WIN32
+    system("mkdir data >nul 2>&1");
+#else
+    system("mkdir -p data");
+#endif
+
+    int choice;
+    do {
+        printf("\n=== Clinic Appointment Scheduling System ===\n");
+        printf("1. Admin Login\n");
+        printf("2. Patient Access (no login)\n");
+        printf("0. Exit\n");
+        printf("Enter choice: ");
+
+        if (scanf("%d", &choice) != 1) {
+            clearInputBuffer();
+            printf("Invalid input\n");
+            continue;
+        }
+        clearInputBuffer();
+
+        if (choice == 1) {
+            if (verifyAdmin()) {
+                adminMenu();
+            }
+        } else if (choice == 2) {
+            int patientId;
+            printf("Enter your Patient ID: ");
+            if (scanf("%d", &patientId) != 1) {
+                clearInputBuffer();
+                printf("Invalid input\n");
+                continue;
+            }
+            clearInputBuffer();
+            patientMenu(patientId);
+        } else if (choice == 0) {
+            printf("Exiting program\n");
+        } else {
+            printf("Invalid choice\n");
+        }
+    } while (choice != 0);
+
+    return 0;
+}
