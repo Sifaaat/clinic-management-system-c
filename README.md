@@ -1,7 +1,7 @@
 # 🏥 Clinic Appointment Scheduling System (C)
 
 
-A menu-driven Hospital / Clinic Appointment Management System developed in C language using file handling.
+## A menu-driven Hospital / Clinic Appointment Management System developed in C language using file handling.
 This project is designed as a capstone / academic project, demonstrating core software engineering concepts such as data persistence, role-based access, and modular programming.
 
 📌 Features
