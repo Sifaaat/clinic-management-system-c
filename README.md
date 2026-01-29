@@ -68,9 +68,9 @@ Clinic-Appointment-System/
 │
 ├── main.c
 ├── data/
-│   ├── patients.txt
-│   ├── doctors.txt
-│   ├── appointments.txt
+│ ├── patients.txt
+│ ├── doctors.txt
+│ ├── appointments.txt
 │
 └── README.md
 
