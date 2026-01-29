@@ -129,7 +129,7 @@ Real-world clinic workflow simulation
 
 👨‍💻 Author
 
-Sifat
+Sifat Ahmed
 BSc in Software Engineering
 
 📜 License
