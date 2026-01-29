@@ -61,7 +61,9 @@ Input Validation
 
 Storage: Text files (CSV-style)
 
-📂 Project Structure
+## 📂 Project Structure
+
+
 Clinic-Appointment-System/
 │
 ├── main.c
